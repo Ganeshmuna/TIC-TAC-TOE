@@ -1,0 +1,308 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tic Tac Toe</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
+    :root {
+      --clr-bg: #121212;
+      --clr-grid-bg: #1e1e1e;
+      --clr-x: #ef4444; /* red-500 */
+      --clr-o: #3b82f6; /* blue-500 */
+      --clr-text: #e0e0e0;
+      --clr-highlight: #facc15; /* yellow-400 */
+      --radius: 12px;
+      --spacing: 16px;
+      --font-family: 'Inter', sans-serif;
+      --font-size-large: 4rem;
+      --font-size-medium: 1.25rem;
+      --button-bg: #2563eb;
+      --button-bg-hover: #1e40af;
+      --button-radius: 8px;
+      --button-padding: 12px 24px;
+      --transition-duration: 0.3s;
+      --max-width: 400px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--clr-bg);
+      color: var(--clr-text);
+      font-family: var(--font-family);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: var(--spacing);
+    }
+
+    main {
+      background: var(--clr-grid-bg);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+      padding: var(--spacing);
+      width: 100%;
+      max-width: var(--max-width);
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing);
+      user-select: none;
+    }
+
+    header {
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-weight: 700;
+      font-size: 2.5rem;
+    }
+
+    #game-status {
+      font-size: var(--font-size-medium);
+      text-align: center;
+      min-height: 1.5em;
+      padding: 4px 0;
+    }
+    
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--spacing);
+      background: #111;
+      border-radius: var(--radius);
+      padding: var(--spacing);
+    }
+
+    .cell {
+      background: #222;
+      aspect-ratio: 1 / 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: var(--font-size-large);
+      font-weight: 700;
+      color: var(--clr-text);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background-color var(--transition-duration);
+      user-select: none;
+    }
+
+    .cell:hover:not(.disabled):not(.occupied) {
+      background-color: #333;
+    }
+
+    .cell.occupied {
+      cursor: default;
+    }
+
+    .cell.x {
+      color: var(--clr-x);
+    }
+
+    .cell.o {
+      color: var(--clr-o);
+    }
+
+    .cell.highlight {
+      background-color: var(--clr-highlight);
+      color: #000;
+      font-weight: 900;
+    }
+
+    button#reset-btn {
+      align-self: center;
+      padding: var(--button-padding);
+      background-color: var(--button-bg);
+      color: white;
+      font-weight: 700;
+      font-size: 1rem;
+      border: none;
+      border-radius: var(--button-radius);
+      cursor: pointer;
+      transition: background-color var(--transition-duration);
+      user-select: none;
+    }
+
+    button#reset-btn:hover,
+    button#reset-btn:focus {
+      background-color: var(--button-bg-hover);
+      outline: none;
+    }
+
+    @media (max-width: 480px) {
+      main {
+        max-width: 100%;
+      }
+      .cell {
+        font-size: 3rem;
+      }
+      header h1 {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main role="main" aria-label="Tic Tac Toe game">
+    <header>
+      <h1>Tic Tac Toe</h1>
+      <div id="game-status" role="alert" aria-live="polite">Player X's turn</div>
+    </header>
+    <div class="board" role="grid" aria-label="Tic Tac Toe board">
+      <button class="cell" role="gridcell" aria-label="Row 1 Column 1" data-index="0"></button>
+      <button class="cell" role="gridcell" aria-label="Row 1 Column 2" data-index="1"></button>
+      <button class="cell" role="gridcell" aria-label="Row 1 Column 3" data-index="2"></button>
+      <button class="cell" role="gridcell" aria-label="Row 2 Column 1" data-index="3"></button>
+      <button class="cell" role="gridcell" aria-label="Row 2 Column 2" data-index="4"></button>
+      <button class="cell" role="gridcell" aria-label="Row 2 Column 3" data-index="5"></button>
+      <button class="cell" role="gridcell" aria-label="Row 3 Column 1" data-index="6"></button>
+      <button class="cell" role="gridcell" aria-label="Row 3 Column 2" data-index="7"></button>
+      <button class="cell" role="gridcell" aria-label="Row 3 Column 3" data-index="8"></button>
+    </div>
+    <button id="reset-btn" aria-label="Start a new game">Reset Game</button>
+  </main>
+
+  <script>
+    (function() {
+      const statusDiv = document.getElementById('game-status');
+      const cells = document.querySelectorAll('.cell');
+      const resetBtn = document.getElementById('reset-btn');
+
+      let board = Array(9).fill('');
+      let currentPlayer = 'X';
+      let isGameActive = true;
+
+      // Winning combinations index positions
+      const winningCombinations = [
+        [0,1,2], [3,4,5], [6,7,8], // rows
+        [0,3,6], [1,4,7], [2,5,8], // columns
+        [0,4,8], [2,4,6]           // diagonals
+      ];
+
+      function updateStatus(message) {
+        statusDiv.textContent = message;
+      }
+
+      function handleCellClick(e) {
+        const cell = e.target;
+        const idx = parseInt(cell.dataset.index, 10);
+
+        if (!isGameActive || board[idx] !== '') return;
+
+        board[idx] = currentPlayer;
+        cell.textContent = currentPlayer;
+        cell.classList.add('occupied', currentPlayer.toLowerCase());
+
+        if (checkWin(currentPlayer)) {
+          endGame(true, currentPlayer);
+        } else if (isDraw()) {
+          endGame(false);
+        } else {
+          togglePlayer();
+          updateStatus(`Player ${currentPlayer}'s turn`);
+        }
+      }
+
+      function checkWin(player) {
+        return winningCombinations.some(combination => {
+          return combination.every(index => board[index] === player);
+        });
+      }
+
+      function isDraw() {
+        return board.every(cell => cell !== '');
+      }
+
+      function endGame(hasWon, winner) {
+        isGameActive = false;
+        if (hasWon) {
+          updateStatus(`Player ${winner} wins!`);
+          highlightWinningCells(winner);
+        } else {
+          updateStatus("It's a draw!");
+        }
+      }
+
+      function highlightWinningCells(player) {
+        winningCombinations.forEach(combination => {
+          if (combination.every(idx => board[idx] === player)) {
+            combination.forEach(idx => {
+              cells[idx].classList.add('highlight');
+            });
+          }
+        });
+      }
+
+      function togglePlayer() {
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      }
+
+      function resetGame() {
+        board.fill('');
+        cells.forEach(cell => {
+          cell.textContent = '';
+          cell.classList.remove('occupied', 'x', 'o', 'highlight');
+        });
+        currentPlayer = 'X';
+        isGameActive = true;
+        updateStatus(`Player ${currentPlayer}'s turn`);
+        cells[0].focus();
+      }
+
+      cells.forEach(cell => {
+        cell.addEventListener('click', handleCellClick);
+        cell.addEventListener('keydown', e => {
+          // Support keyboard navigation and move selection keys
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            cell.click();
+          }
+          // Arrow key navigation within the 3x3 grid
+          const idx = parseInt(cell.dataset.index);
+          let nextIdx;
+          switch(e.key) {
+            case 'ArrowRight':
+              nextIdx = (idx + 1) % 9;
+              cells[nextIdx].focus();
+              e.preventDefault();
+              break;
+            case 'ArrowLeft':
+              nextIdx = (idx + 8) % 9;
+              cells[nextIdx].focus();
+              e.preventDefault();
+              break;
+            case 'ArrowDown':
+              nextIdx = (idx + 3) % 9;
+              cells[nextIdx].focus();
+              e.preventDefault();
+              break;
+            case 'ArrowUp':
+              nextIdx = (idx + 6) % 9; // moving up 3 cells wrap if needed
+              cells[nextIdx].focus();
+              e.preventDefault();
+              break;
+          }
+        });
+      });
+
+      resetBtn.addEventListener('click', resetGame);
+
+      // Initialize
+      resetGame();
+    })();
+  </script>
+</body>
+</html>
+
+```
